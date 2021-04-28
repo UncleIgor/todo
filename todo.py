@@ -2,54 +2,97 @@
 
 import re
 
-STR_COUNT=0
-FULL_LINE=""
-DOC_LIST = list();
+DEF_TASK_PARAMS=(("dates", 0), ("content", 0), ("tags", 0), ("indent", 0), ("chekbox", 0))
 
 def reset_dict():
-    DSC_TASK.clear()
-    DSC_TASK['chekbox']=0 #bool
-    DSC_TASK['content']=None
-    DSC_TASK['dates']=None
-    DSC_TASK['tags']=None
-    DSC_TASK['indent']=0 #int
-    DSC_TASK['prio']=0 #int
+    dsc_task.clear()
+    dsc_task['chekbox']=0 #bool
+    dsc_task['content']=None
+    dsc_task['dates']=None
+    dsc_task['tags']=None
+    dsc_task['indent']=0 #int
+    dsc_task['prio']=0 #int
 
-def parsing_task(line, num_line):
-    
-    line = re.sub("\n|\r", '', line)
-    if not line:
-        DSC_TASK['content']=None
-        return 2
-    
-    reset_dict()
-    
-    DSC_TASK['indent']=re.match('^\s+', line)
+def parsing_task(in_str):
+    dsc_task=dict()
 
-    if re.search(r'\[x\]', line):
-        DSC_TASK['chekbox'] = 1        
-    
-    DSC_TASK['dates'] = re.findall(r'\[(\d{1,2}\.\d{1,2}\.\d{2,4}.*)\]', line)
+    if not in_str:
+        return 1;
 
-    DSC_TASK['content'] = re.sub(r"\[x\]|\s+", ' ', line)
+    if in_str.isspace():
+        return dsc_task
     
-    if DSC_TASK['dates']:
+    #Вычисляем отступ
+    indent=re.match('^\s+', in_str)
+    if indent:
+        dsc_task['indent']=(indent.end()//4)*4
+    
+    #Статус задачи
+    if re.search('\[x\]', in_str):
+        dsc_task['chekbox']=1        
+
+    #Дата 
+    date=re.findall('\[(\d{1,2}\.\d{1,2}\.\d{2,4}.*)\]', in_str)
+    if date:
+        dsc_task['dates']=''.join(date)
+    
+    #Теги
+    dsc_task['tags']="NO_ЕФПЫ"
+    tags = re.findall(r'[@,+,#]\S+', in_str)
+    
+    return dsc_task
+    
+
+    dsc_task['content'] = re.sub(r"\[x\]|\s+", ' ', in_str)
+    
+    if dsc_task['dates']:
        print(1)
-       DSC_TASK['content'] = re.findall(r'^\s*(.+)\s+\[', DSC_TASK['content'])
+       dsc_task['content'] = re.findall(r'^\s*(.+)\s+\[', dsc_task['content'])
     else:
        print(2)
-       DSC_TASK['content'] = re.findall(r'^\s*(.+)\s*', DSC_TASK['content'])
+       dsc_task['content'] = re.findall(r'^\s*(.+)\s*', dsc_task['content'])
 
-    #print (DSC_TASK['content'])
-    tags = re.findall(r'[@,+,#]\S+', line)
+    #print (dsc_task['content'])
+    tags = re.findall(r'[@,+,#]\S+', in_str)
     if tags:
-        DSC_TASK['tags']=tags
-        myString = ''.join(DSC_TASK['content'])
-        for list_pattern in DSC_TASK['tags']:
+        dsc_task['tags']=tags
+        myString = ''.join(dsc_task['content'])
+        for list_pattern in dsc_task['tags']:
             myString = myString.replace(list_pattern, '')
             #print (myString)
-        DSC_TASK['content'] = myString
-    #print ("Стока:", num_line, "Состояние", DSC_TASK['chekbox'], DSC_TASK['dates'], DSC_TASK['content'], "Отступ", DSC_TASK['indent'], DSC_TASK['tags'])
+        dsc_task['content'] = myString
+    #print ("Стока:", num_in_str, "Состояние", dsc_task['chekbox'], dsc_task['dates'], dsc_task['content'], "Отступ", dsc_task['indent'], dsc_task['tags'])
+    return 0
+
+def add_def_params_2_task(task):
+    if not task:
+        return dict()
+
+    for parameters in DEF_TASK_PARAMS:
+        parameter, value = parameters
+        if not parameter in task:
+            task[parameter]=value
+    
+    return task
+
+def processing_task(task):
+    if not task or task[content] == 0:
+        return "EMPTY_STR"
+    return "blablabla"
+
+
+def print_task(task):
+    if not task:
+        print ("Пустая строка")
+        return 0
+
+    print(task, len(task) )
+    return 0
+    for item in task:
+        if not task['dates']:
+            task['dates']=""
+
+    print("Отступ:", task['indent'], "Статус:", task['chekbox'], "Дата:", task['dates'])
     return 0
 
 def print_format_task():
@@ -80,29 +123,22 @@ def print_format_task():
     
     tmp_f.close()
 
-try:
-    with open("TODO", encoding="utf-8") as file_handler:
-        for line in file_handler:
-            
-            STR_COUNT+=1
-            #print(STR_COUNT)
-            result=re.search(r'/$', line)
-            if result != None:
-                FULL_LINE+=line 
-                continue
-            if FULL_LINE:
-                line=FULL_LINE+line
-                FULL_LINE=""    
+def main(file_name):
+    todo_list = list();
 
-            #if parsing_task(line, STR_COUNT) == 2:
-                #tmp_todo.write("\n")
-             #   continue
-            parsing_task(line, STR_COUNT)
-            DOC_LIST.append(DSC_TASK.copy())
+    try:
+        file_handler = open(file_name, 'r')
+    except IOError:
+        print("Файла не существует")
+        exit(0)
+        
+    for line in file_handler:
+        task=parsing_task(line)
+        task=add_def_params_2_task(task)
+        task=processing_task(task)
+        print_task(task)
+    file_handler.close()
 
-except IOError:
-    print("Файла не существует")
-    exit(0)
+main("TODO")
 
-print_format_task()
 
