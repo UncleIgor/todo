@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
+from os import CLD_EXITED
 import re
-import datetime
+#import datetime
+from datetime import datetime
 
 def parsing_task(task_str):
     dsc_task=dict()
@@ -20,19 +22,19 @@ def parsing_task(task_str):
     #Статус задачи
     if re.search('\[x\]', task_str):
         dsc_task['chekbox']=1        
-
+    
     #Дата_начала 
     start_date=re.findall('\[(\d{1,2}\.\d{1,2}\.\d{2,4}).*\]', task_str)
     if start_date:
         dsc_task['start_date']=''.join(start_date)
-        task_str=task_str.replace(dsc_task['start_date'], "")
+        task_str=task_str.replace(dsc_task['start_date'], "", 1)
     
     #Дата_завершения
-    close_date=re.findall('\[.-.(\d{1,2}\.\d{1,2}\.\d{2,4})\]', task_str)
+    close_date=re.findall('\[.*-.(\d{1,2}\.\d{1,2}\.\d{2,4}).*\]', task_str)
     if close_date:
         dsc_task['close_date']=''.join(close_date)
-        task_str=re.sub('\[.-.(\d{1,2}\.\d{1,2}\.\d{2,4})\]', '', task_str)
-        
+        task_str=re.sub('\[.-.\d{1,2}\.\d{1,2}\.\d{2,4}\]', '', task_str)
+    
     #Теги
     dsc_task['tags']=re.findall(r'[@,+,#]\S+', task_str)
     if dsc_task['tags']:
@@ -46,7 +48,7 @@ def parsing_task(task_str):
     task_str=re.match('^\s*(.+)\s+', task_str)
     if task_str:
         dsc_task['content']=re.sub(r'\s\s+', '', task_str.group(1))
-    
+
     return dsc_task
 
 def processing_task(task):
@@ -60,15 +62,18 @@ def processing_task(task):
 
     #Добавление даты начала
     if not task.get("start_date", None):
-        now = datetime.datetime.now()
+        # now = datetime.datetime.now()
+        now = datetime.now()
         task["start_date"]=now.strftime("%d.%m.%Y")
     
     #Добавление даты завершения
-    if task.get("chekbox", None):
-        now = datetime.datetime.now()
+    if task.get("chekbox", None) and not task.get("close_date", None) :
+        # now = datetime.datetime.now()
+        now = datetime.now()
         task["close_date"]=now.strftime("%d.%m.%Y")
 
     #Обработка тегов
+
 
     return task
 
@@ -91,17 +96,15 @@ def print_todo_2_file(todo_list):
 
         content=task.get("content", None)
         indent=task.get("indent", 0)
-        chekbox=task.get("chekbox", "")
         start_date=task.get("start_date", "")
         close_date=task.get("close_date", None)
         tags=' '.join(task.get("tags", ""))
-        
+        indent=''.rjust(indent*4, " ")
+
         if close_date:
             date='[{0} - {1}]'.format(start_date, close_date)
         else:
             date='[{0}]'.format(start_date)
-
-        indent=''.rjust(indent*4, " ")
 
         tmp_f.write(''.join("%s%-80s %s %s\n" % (indent, content, date, tags)))
         
@@ -122,10 +125,43 @@ def sort_by_prio(todo_list):
         prio=task.get("prio", -1)
         print(prio)
 
+def cmp_date(date):
+    date2 = datetime.now()
+    date1 = datetime.strptime(date, "%d.%m.%Y") 
+    delta = date2 - date1
+    return delta.days
+
+def print_2_chlog(task):
+    try:
+        chlog_f = open('chlog', 'a')
+    except:
+        print ("Не смог создать временный файл")
+        return 2
+
+    if not task:
+        chlog_f.write('\n')
+        chlog_f.close()
+        return 0
+
+    content=task.get("content", None)
+    indent=task.get("indent", 0)
+    start_date=task.get("start_date", "")
+    close_date=task.get("close_date", None)
+    tags=' '.join(task.get("tags", ""))
+    
+    if close_date:
+        date='[{0} - {1}]'.format(start_date, close_date)
+    else:
+        date='[{0}]'.format(start_date)
+    indent=''.rjust(indent*4, " ")
+
+    chlog_f.write(''.join("%s%-80s %s %s\n" % (indent, content, date, tags)))
+        
+    chlog_f.close()
+
 def main(file_name):
     idx_deph=list()
     idx_deph.append(-1)
-    depth=0
     todo_list=list()
 
     try:
@@ -136,102 +172,15 @@ def main(file_name):
     
     for line in file_handler:
         task=parsing_task(line)
-        task=processing_task(task)
-        #print(task.get("indent", 0))
-        cur_depth=task.get("indent", 0)
-        
-        if cur_depth == depth:
-            idx_deph[depth]+=1
-        elif cur_depth > depth:
-            depth=cur_depth
-            idx_deph.insert(depth, 0)
-        elif cur_depth < depth:
-            up_depth=depth-cur_depth
-            for number in range(up_depth):
-                idx_deph.pop(-1)
-            depth=cur_depth
-            idx_deph[depth]+=1
-        print("Путь строки", idx_deph)
-        todo_list.append(task)
-        
+        task=processing_task(task)        
+        close_date=task.get("close_date", None)
+        if close_date and (cmp_date(close_date) > 2):
+            print_2_chlog(task)
+            continue
+        todo_list.append(task)      
     file_handler.close()
+    print_todo_2_file(todo_list)
 
-    #Сортировка
-    #sort_by_prio(todo_list)
-    
-#    print_todo_2_file(todo_list)
+main("TODO1")
+exit(0)
 
-# main("TODO1")
-
-
-# depth - переключатель глубины
-# last_depth_idx - последний индекс на текущей глубине
-# cur_depth - текщая глубина
-# prev_depth - глубина предыдущей задачи
-# idx_deph_mas - массив индексов на каждой глубине [0, 0, 0]
-
-
-
-
-
-def save_task(puth, task):
-    db_list=TODO_DB
-    interator=0
-    print(puth)
-    size_puth=len(puth)
-    for node in puth:
-       /interator+=1
-        print(interator, size_puth)
-        if interator > size_puth:
-            db_list=list()
-            db_list.append(task)
-            return 0
-        # try:
-        
-        if node == 0:
-            print(node, len(db_list))
-            db_list=db_list[node]
-        else:
-            db_list=db_list[node-1]
-        # except:
-        #     db_list.insert(node, task)
-        #     return 0
-    #print("----------------------")
-
-TODO_DB=list()
-idx_deph=list()
-idx_deph.append(-1)
-depth=0
-# test_deph=(0, 0, 1, 2, 2, 1, 2, 2, 3, 3, 0, 1, 0)
-
-for cur_depth in test_deph:    
-    if cur_depth == depth:
-        idx_deph[depth]+=1
-    elif cur_depth > depth:
-        depth=cur_depth
-        idx_deph.insert(depth, 0)
-    elif cur_depth < depth:
-        up_depth=depth-cur_depth
-        for number in range(up_depth):
-            idx_deph.pop(-1)
-            depth=cur_depth
-            idx_deph[depth]+=1
-    #print("Путь строки", idx_deph)
-    save_task(idx_deph, list(range(5)))
-    #print(TODO_DB)
-        #TODO_DB.append(list(range(1)))
-print(TODO_DB)
-
-    # if cur_depth == depth:
-    #     idx_deph[depth]+=1
-    # elif cur_depth > depth:
-    #     depth=cur_depth
-    #     idx_deph.insert(depth, 0)
-    # elif cur_depth < depth:
-    #     up_depth=depth-cur_depth
-    #     for number in range(up_depth):
-    #         idx_deph.pop(-1)
-    #     depth=cur_depth
-    #     idx_deph[depth]+=1
-    # save_task(idx_deph)        
-#    print("Путь строки", idx_deph)
