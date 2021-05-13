@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
-from os import CLD_EXITED
 import re
-#import datetime
+import sys
 from datetime import datetime
 
 def parsing_task(task_str):
@@ -84,7 +83,7 @@ def print_todo_2_file(todo_list):
         return 1
 
     try:
-        tmp_f = open('tmp', 'w')
+        tmp_f = open('./tmp/tmp_todo', 'w')
     except:
         print ("Не смог создать временный файл")
         return 2
@@ -133,9 +132,9 @@ def cmp_date(date):
 
 def print_2_chlog(task):
     try:
-        chlog_f = open('chlog', 'a')
+        chlog_f = open('./tmp/new_chlog', 'a')
     except:
-        print ("Не смог создать временный файл")
+        print ("Нет файла для дозаписи")
         return 2
 
     if not task:
@@ -155,7 +154,7 @@ def print_2_chlog(task):
         date='[{0}]'.format(start_date)
     indent=''.rjust(indent*4, " ")
 
-    chlog_f.write(''.join("%s%-80s %s %s\n" % (indent, content, date, tags)))
+    chlog_f.write(''.join("%-80s %s %s\n" % (content, date, tags)))
         
     chlog_f.close()
 
@@ -181,6 +180,12 @@ def main(file_name):
     file_handler.close()
     print_todo_2_file(todo_list)
 
-main("TODO1")
+if __name__ == "__main__" and (len (sys.argv) != 2):
+    print ("Ошибка входных параметров параметров.")
+    sys.exit (1)    
+# param_value = sys.argv[1]
+# print(param_value)
+main(sys.argv[1])
+
 exit(0)
 
