@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import re
-import sys
+#import sys
 from datetime import datetime
 
 def parsing_task(task_str):
@@ -96,11 +96,12 @@ def print_todo_2_file(todo_list):
         content=task.get("content", None)
         indent=task.get("indent", 0)
         start_date=task.get("start_date", "")
+        chekbox=task.get("chekbox", None)
         close_date=task.get("close_date", None)
         tags=' '.join(task.get("tags", ""))
         indent=''.rjust(indent*4, " ")
 
-        if close_date:
+        if close_date and chekbox:
             date='[{0} - {1}]'.format(start_date, close_date)
         else:
             date='[{0}]'.format(start_date)
@@ -180,12 +181,13 @@ def main(file_name):
     file_handler.close()
     print_todo_2_file(todo_list)
 
-if __name__ == "__main__" and (len (sys.argv) != 2):
-    print ("Ошибка входных параметров параметров.")
-    sys.exit (1)    
+#if __name__ == "__main__" and (len (sys.argv) != 2):
+#    print ("Ошибка входных параметров параметров.")
+#    sys.exit (1)    
 # param_value = sys.argv[1]
 # print(param_value)
-main(sys.argv[1])
+# main(sys.argv[1])   
+main("test_todo.txt")
 
 exit(0)
 

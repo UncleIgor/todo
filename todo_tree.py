@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from operator import add
 import re
 import datetime
 from anytree import Node, RenderTree, Walker,  Resolver 
@@ -108,26 +109,66 @@ def print_todo_2_file(todo_list):
         
     tmp_f.close()
 
-def sort_by_prio(todo_list):
-    if not todo_list:
-        print ("Пустое TODO")
-        return 1
+def print_tree_old(todo_tree):
+    todo_list=list()
+    # получить кол детей 
+    # если 0:
+    #     отправить на печать
+    #     выход
+    # если >1 отсортировать по приоритету
+    # рекурсия ин
 
-    sort_todo=[]
+    size_ch=len(todo_tree.children)
+    if size_ch == 0:
+        print(todo_tree.task.get("content", None))
+        return 0
     
-    for task in todo_list:
-        if not task:
-            continue
-        
-        indent=task.get("indent", 0)
-        prio=task.get("prio", -1)
-        print(prio)
+    for child in todo_tree.children:
+        prio=child.task.get("prio", 100)
+        print
+        todo_list.insert(prio, child)
+    
+    for child in todo_list:
+        print(child.task.get("content", None))
+        #if len(child.children) > 0 :
+        #    print_tree(child)
+        #task=child.task
+        #print(task.get("content", None))
+    return 0
+
+def print_tree1(todo_tree):
+    todo_list=Node("root1")
+    # получить кол детей 
+    # если 0:
+    #     отправить на печать
+    #     выход
+    # если >1 отсортировать по приоритету
+    # рекурсия ин
+
+    size_ch=len(todo_tree.children)
+    if size_ch == 0:
+        print(todo_tree.task.get("content", None))
+        return 0
+    
+    for child in todo_tree.children:
+        prio=child.task.get("prio", None)
+        if prio == 1:
+            todo_list.insert()
+    
+    for child in todo_list:
+        if len(child.children) > 0 :
+            print_tree(child)
+        task=child.task
+        print(task.get("prio", None))
+    return 0
+
 
 def main(file_name):
-    todo_list=list()
+    puth_task=list(range(1))
+    prev_indent=0
 
     idx_deph=list()
-#    root=Node("root")
+    root=Node("root")
     
     try:
         file_handler = open(file_name, 'r', encoding="utf-8")
@@ -139,33 +180,80 @@ def main(file_name):
         task=parsing_task(line)
         task=processing_task(task)
 
-        cur_depth=task.get("indent", 0)
-        name_task=task.get("content", "\n")
-
-        idx_deph.insert(cur_depth, None)
-        if cur_depth == 0:
-            idx_deph[cur_depth]=Node(name_task, parent=root, task=task)
+        indent=task.get("indent", 0)
+        idx_deph.insert(indent, None)
+        content=task.get("content", "\n")
+        
+        #Пропуск пустых строк
+        if (indent == 0) and (content == "\n"):
             continue
-        idx_deph[cur_depth]=Node(name_task, parent=idx_deph[cur_depth-1], task=task)    
-        #todo_list.append(task)
+        
+        #Вычисление имени узла
+        if indent == prev_indent:
+            puth_task[prev_indent]+=1
+        elif indent > prev_indent:
+            prev_indent=indent
+            puth_task.insert(prev_indent, 0)
+        elif indent < prev_indent:
+            for number in range(prev_indent-indent):
+                puth_task.pop(-1)
+            prev_indent=indent
+        puth_task[prev_indent]+=1
+        name_task=puth_task[-1]
+        
+        #Добавление к дереву
+        if indent == 0:
+            idx_deph[indent]=Node(name_task, parent=root, task=task)
+            continue
+        idx_deph[indent]=Node(name_task, parent=idx_deph[indent-1], task=task)    
+
     file_handler.close()
-    
-    r = Resolver('name')
-    tess=r.get(root, '/root/task1')
-    
-    print("---------", tess.task.get("content"))
-    print(RenderTree(root))
-    for pre, fill, node in RenderTree(root):
-        print( "%s%s" % (pre, node.name))
+
+    print_tree(root)
+
+    #w = Walker()
+    #res=w.walk(root, root)
+    #print(res)
     
 
-
-    #gogo=list(root.children)
-    #print(gogo[1].task.get("content", "---"))
-
-main("TODO1")
+main("test_todo.txt")
 
 exit(0)
+
+# #Вычисление имени узла2
+#         size_path=len(ddd)
+#         if size_path < indent:
+#             ddd.insert(indent,0)
+#         elif size_path > indent:
+#             ddd[-1]+=1
+#         elif size_path == indent:
+#             print(size_path,  indent)
+#             ddd[indent-1]+=1
+#             for num in range(size_path-indent):
+#                 ddd[size_path-num]=0
+
+
+puth_task=list()
+puth_task.insert(0,0)
+prev_indent=0
+indent_mas=(0, 0, 1, 2, 2, 1, 2, 2, 3, 3, 0, 1, 0)
+
+for cur_indent in indent_mas:    
+    if cur_indent == prev_indent:
+        puth_task[prev_indent]+=1
+    elif cur_indent > prev_indent:
+        prev_indent=cur_indent
+        puth_task.insert(prev_indent, 0)
+    elif cur_indent < prev_indent:
+        for number in range(prev_indent-cur_indent):
+            puth_task.pop(-1)
+        prev_indent=cur_indent
+        puth_task[prev_indent]+=1
+    str='.'.join("{0}".format(n) for n in puth_task)
+
+    print("Путь строки", str)
+
+
 
 # depth - переключатель глубины
 # last_depth_idx - последний индекс на текущей глубине
@@ -202,9 +290,9 @@ exit(0)
 # idx_deph=list()
 # idx_deph.append(-1)
 # depth=0
-# test_deph=(0, 0, 1, 2, 2, 1, 2, 2, 3, 3, 0, 1, 0)
+# indent=(0, 0, 1, 2, 2, 1, 2, 2, 3, 3, 0, 1, 0)
 
-# for cur_depth in test_deph:    
+# for cur_depth in indent:    
 #     if cur_depth == depth:
 #         idx_deph[depth]+=1
 #     elif cur_depth > depth:
@@ -217,7 +305,8 @@ exit(0)
 #             depth=cur_depth
 #             idx_deph[depth]+=1
 #     #print("Путь строки", idx_deph)
-#     save_task(idx_deph, list(range(5)))
+#     
+# save_task(idx_deph, list(range(5)))
 #     #print(TODO_DB)
 #         #TODO_DB.append(list(range(1)))
 # print(TODO_DB)
